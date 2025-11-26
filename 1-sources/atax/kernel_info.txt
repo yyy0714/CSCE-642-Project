@@ -1,0 +1,33 @@
+kernel_info = {
+    "num_loops": 4,
+
+    "base_metrics": {
+        "latency":    23342,
+        "ff_usage":   12032,
+        "lut_usage":  18164,
+        "dsp_usage":  14,
+        "bram_usage": 8,
+    },
+
+    "best_metrics": {
+        "latency":    383,
+        "ff_usage":   50688,
+        "lut_usage":  31125,
+        "dsp_usage":  330,
+        "bram_usage": 26,
+    },
+
+    "loops": [
+        {"name": "kernel/loop_1", "trip_count": 12,},
+        {"name": "kernel/loop_2", "trip_count": 11,},
+        {"name": "kernel/loop_3", "trip_count": 12,},
+        {"name": "kernel/loop_4", "trip_count": 12,},
+    ],
+
+    "arrays": [
+        {"name": "kernel A",   "shape": (11, 12),},
+        {"name": "kernel x",   "shape": (12,),},
+        {"name": "kernel y",   "shape": (12,),},
+        {"name": "kernel tmp", "shape": (11,),},
+    ],
+}
