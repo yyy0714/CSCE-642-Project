@@ -3,8 +3,6 @@ import ppo
 if __name__ == "__main__":
     # default kernel is 2mm
     kernel_info = {
-        "num_loops": 6,
-
         "base_metrics": {
             "latency":    14687,
             "ff_usage":   14310,
