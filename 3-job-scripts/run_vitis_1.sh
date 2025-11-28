@@ -13,6 +13,6 @@
 
 source /opt/coe/Xilinx/Vitis_HLS/2023.1/settings64.sh
 
-cd ./1-designs/design-1
+cd ./2-designs/design-1
 
 vitis_hls vitis.tcl
