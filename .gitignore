@@ -5,3 +5,5 @@ __pycache__/*
 *.log
 
 *.pth
+
+2-designs/design-*
