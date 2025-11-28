@@ -18,7 +18,10 @@ exit
 ## Step 1. Populating Design Files
 Copy all the `design-*` directories from `1-sources/<DESIGN_NAME>` to `2-designs` where `DESIGN_NAME` is the name of the design (`2mm` by default).
 
-## Step 2. Running the Program
+## Step 2. Populating Kernel Info
+Copy the content in `1-sources/<DESIGN_NAME>/kernel_info.txt` to `main.py` where `DESIGN_NAME` is the name of the design (`2mm` by default).
+
+## Step 3. Running the Program
 Execute the following command to run the program for training and evaluating PPO agent.
 
 ```shell
