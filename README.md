@@ -13,12 +13,17 @@ pip install -r requirements.txt
 exit
 ```
 
-# Run the program
-Execute the following command to run the program
+# Getting Started
+
+## Step 1. Populating Design Files
+Copy all the `design-*` directories from `1-sources/<DESIGN_NAME>` to `2-designs` where `DESIGN_NAME` is the name of the design (`2mm` by default).
+
+## Step 2. Running the Program
+Execute the following command to run the program for training and evaluating PPO agent.
 
 ```shell
 sbatch ./job-scripts/job.sh
 ```
 
-# Add New Benchmark
-Follow the file structure in `1-sources` directory. The default design (used in `2-designs`) is `2mm`.
+# Adding New Benchmarks
+Follow the file structure in `1-sources` directory.
