@@ -286,5 +286,5 @@ class Env(gym.Env):
 gym.register(
     id = "yiyang/Env-v0",
     entry_point = Env,
-    max_episode_steps = 64,
+    max_episode_steps = 128,
 )

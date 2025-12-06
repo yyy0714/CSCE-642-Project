@@ -71,11 +71,11 @@ def train_ppo_agent(kernel_info: str, ppo_agent_model_hidden_layer_dim: int, ppo
     NUM_ENVS = 16
     
     # PPO related parameters
-    NUM_ITERATIONS = 8
-    NUM_TIME_STEPS = 32
-    NUM_EPOCHS = 40
+    NUM_ITERATIONS = 10
+    NUM_STEPS = 128
+    NUM_EPOCHS = 4
 
-    BATCH_SIZE = NUM_TIME_STEPS * NUM_ENVS
+    BATCH_SIZE = NUM_STEPS * NUM_ENVS
     MINIBATCH_SIZE = 64
 
     GAMMA = 0.99
@@ -115,26 +115,26 @@ def train_ppo_agent(kernel_info: str, ppo_agent_model_hidden_layer_dim: int, ppo
 
     torch.manual_seed(seed=0)
 
-    # shape (NUM_TIME_STEPS, NUM_ENVS, NUM_OBS)
+    # shape (NUM_STEPS, NUM_ENVS, NUM_OBS)
     if envs.single_observation_space.shape is not None:
-        total_batched_observations: torch.Tensor = torch.full(size=(NUM_TIME_STEPS, NUM_ENVS) + envs.single_observation_space.shape, fill_value=0.0, dtype=torch.float32)
+        total_batched_observations: torch.Tensor = torch.full(size=(NUM_STEPS, NUM_ENVS) + envs.single_observation_space.shape, fill_value=0.0, dtype=torch.float32)
     else:
-        total_batched_observations: torch.Tensor = torch.full(size=(NUM_TIME_STEPS, NUM_ENVS), fill_value=0.0, dtype=torch.float32)
+        total_batched_observations: torch.Tensor = torch.full(size=(NUM_STEPS, NUM_ENVS), fill_value=0.0, dtype=torch.float32)
     # print(f"Total Batched Observations: {total_batched_observations} (shape: {total_batched_observations.shape}, dtype: {total_batched_observations.dtype})")
 
-    # shape (NUM_TIME_STEPS, NUM_ENVS,)
+    # shape (NUM_STEPS, NUM_ENVS,)
     if envs.single_action_space.shape is not None:
-        total_batched_actions: torch.Tensor = torch.full(size=(NUM_TIME_STEPS, NUM_ENVS) + envs.single_action_space.shape, fill_value=0, dtype=torch.int64)
+        total_batched_actions: torch.Tensor = torch.full(size=(NUM_STEPS, NUM_ENVS) + envs.single_action_space.shape, fill_value=0, dtype=torch.int64)
     else:
-        total_batched_actions: torch.Tensor = torch.full(size=(NUM_TIME_STEPS, NUM_ENVS), fill_value=0, dtype=torch.int64)
+        total_batched_actions: torch.Tensor = torch.full(size=(NUM_STEPS, NUM_ENVS), fill_value=0, dtype=torch.int64)
     # print(f"Total Batched Actions: {total_batched_actions} (shape: {total_batched_actions.shape}, dtype: {total_batched_actions.dtype})")
     
-    total_batched_action_log_probs: torch.Tensor = torch.full(size=(NUM_TIME_STEPS, NUM_ENVS), fill_value=0.0,   dtype=torch.float32)
-    total_batched_rewards: torch.Tensor          = torch.full(size=(NUM_TIME_STEPS, NUM_ENVS), fill_value=0.0,   dtype=torch.float32)
-    total_batched_is_done: torch.Tensor          = torch.full(size=(NUM_TIME_STEPS, NUM_ENVS), fill_value=False, dtype=bool)
-    total_batched_values: torch.Tensor           = torch.full(size=(NUM_TIME_STEPS, NUM_ENVS), fill_value=0.0,   dtype=torch.float32)
-    total_batched_advantages: torch.Tensor       = torch.full(size=(NUM_TIME_STEPS, NUM_ENVS), fill_value=0.0,   dtype=torch.float32)
-    total_batched_returns: torch.Tensor          = torch.full(size=(NUM_TIME_STEPS, NUM_ENVS), fill_value=0.0,   dtype=torch.float32)
+    total_batched_action_log_probs: torch.Tensor = torch.full(size=(NUM_STEPS, NUM_ENVS), fill_value=0.0,   dtype=torch.float32)
+    total_batched_rewards: torch.Tensor          = torch.full(size=(NUM_STEPS, NUM_ENVS), fill_value=0.0,   dtype=torch.float32)
+    total_batched_is_done: torch.Tensor          = torch.full(size=(NUM_STEPS, NUM_ENVS), fill_value=False, dtype=bool)
+    total_batched_values: torch.Tensor           = torch.full(size=(NUM_STEPS, NUM_ENVS), fill_value=0.0,   dtype=torch.float32)
+    total_batched_advantages: torch.Tensor       = torch.full(size=(NUM_STEPS, NUM_ENVS), fill_value=0.0,   dtype=torch.float32)
+    total_batched_returns: torch.Tensor          = torch.full(size=(NUM_STEPS, NUM_ENVS), fill_value=0.0,   dtype=torch.float32)
 
     # shape (NUM_ENVS, DIM_OBSERVATION_SPACE), (NUM_ENVS, DIM_INFO)
     batched_observations, batched_info = envs.reset(seed=0)
@@ -145,14 +145,15 @@ def train_ppo_agent(kernel_info: str, ppo_agent_model_hidden_layer_dim: int, ppo
     # print(f"Batched Observations: {batched_observations} (shape: {batched_observations.shape}, dtype: {batched_observations.dtype})")
 
     # shape (NUM_ENVS, NUM_LEGAL_DIRECTIVES)
-    batched_action_masks: torch.Tensor = torch.tensor(batched_info["legal_directive_idx_mask"], dtype=torch.float32)
+    # TODO: uncomment below line to enable masked action
+    # batched_action_masks: torch.Tensor = torch.tensor(batched_info["legal_directive_idx_mask"], dtype=torch.float32)
     # print(f"Batched Action Masks: {batched_action_masks} (shape: {batched_action_masks.shape}, dtype: {batched_action_masks.dtype})")
 
     for iteration in range(NUM_ITERATIONS):
 
-        for time_step in range(NUM_TIME_STEPS):
+        for step in range(NUM_STEPS):
 
-            # During each TIME STEP, execute and record an action
+            # During each STEP, execute and record an action
             with torch.no_grad():
                 # shape (NUM_ENVS, NUM_ACTIONS)
                 batched_action_logits: torch.Tensor = agent.get_action_logits(batched_observations)
@@ -186,9 +187,9 @@ def train_ppo_agent(kernel_info: str, ppo_agent_model_hidden_layer_dim: int, ppo
                 # print(f"Batched Values: {batched_values} (shape: {batched_values.shape}, dtype: {batched_values.dtype})")
 
                 # Record
-                total_batched_actions[time_step] = batched_actions
-                total_batched_action_log_probs[time_step] = batched_action_log_probs
-                total_batched_values[time_step] = batched_values
+                total_batched_actions[step] = batched_actions
+                total_batched_action_log_probs[step] = batched_action_log_probs
+                total_batched_values[step] = batched_values
             
             # Execute the chose actions
             batched_observations, batched_rewards, batched_is_terminated, batched_is_truncated, _, = envs.step(batched_actions)
@@ -206,7 +207,7 @@ def train_ppo_agent(kernel_info: str, ppo_agent_model_hidden_layer_dim: int, ppo
             # print(f"Batched Is Done: {batched_is_done} (shape: {batched_is_done.shape}, dtype: {batched_is_done.dtype})")
 
             # Record
-            total_batched_rewards[time_step] = batched_rewards
+            total_batched_rewards[step] = batched_rewards
 
 
         # During each ITERATION, calculate the returns
@@ -221,8 +222,8 @@ def train_ppo_agent(kernel_info: str, ppo_agent_model_hidden_layer_dim: int, ppo
 
             batched_advantages = 0
 
-            for i in reversed(range(NUM_TIME_STEPS)):
-                if i == NUM_TIME_STEPS - 1:
+            for i in reversed(range(NUM_STEPS)):
+                if i == NUM_STEPS - 1:
                     # shape (NUM_ENVS,)
                     batched_is_not_done: torch.Tensor = torch.logical_not(batched_is_done)
                     # print(f"Batched Is Not Done: {batched_is_not_done} (shape: {batched_is_not_done.shape}, dtype: {batched_is_not_done.dtype})")
@@ -244,33 +245,33 @@ def train_ppo_agent(kernel_info: str, ppo_agent_model_hidden_layer_dim: int, ppo
             total_batched_returns: torch.Tensor = total_batched_advantages + total_batched_values
 
 
-        # shape (NUM_TIME_STEPS * NUM_ENVS, NUM_OBS)
+        # shape (NUM_STEPS * NUM_ENVS, NUM_OBS)
         if envs.single_observation_space.shape is not None:
             total_flatten_batched_observations: torch.Tensor = total_batched_observations.reshape((-1,) + envs.single_observation_space.shape)
         else:
             total_flatten_batched_observations: torch.Tensor = total_batched_observations.reshape(-1)
         # print(f"Total Batched Observations: (shape: {total_batched_observations.shape}, dtype: {total_batched_observations.dtype})")
 
-        # shape (NUM_TIME_STEPS * NUM_ENVS,)
+        # shape (NUM_STEPS * NUM_ENVS,)
         if envs.single_action_space.shape is not None:
             total_flatten_batched_action_indices: torch.Tensor = total_batched_actions.reshape((-1,) + envs.single_action_space.shape)
         else:
             total_flatten_batched_action_indices: torch.Tensor = total_batched_actions.reshape(-1)
         # print(f"Total Batched Action Indices: (shape: {total_batched_action_indices.shape}, dtype: {total_batched_action_indices.dtype})")
 
-        # shape (NUM_TIME_STEPS * NUM_ENVS,)
+        # shape (NUM_STEPS * NUM_ENVS,)
         total_flatten_batched_action_log_probs: torch.Tensor = total_batched_action_log_probs.reshape(-1)
         # print(f"Total Batched Action Log Probs: (shape: {total_batched_action_log_probs.shape}, dtype: {total_batched_action_log_probs.dtype})")
 
-        # shape (NUM_TIME_STEPS * NUM_ENVS,)
+        # shape (NUM_STEPS * NUM_ENVS,)
         total_flatten_batched_values: torch.Tensor = total_batched_values.reshape(-1)
         # print(f"Total Batched Values: (shape: {total_batched_values.shape}, dtype: {total_batched_values.dtype})")
 
-        # shape (NUM_TIME_STEPS * NUM_ENVS,)
+        # shape (NUM_STEPS * NUM_ENVS,)
         total_flatten_batched_advantages: torch.Tensor = total_batched_advantages.reshape(-1)
         # print(f"Total Batched Advantages: (shape: {total_batched_advantages.shape}, dtype: {total_batched_advantages.dtype})")
 
-        # shape (NUM_TIME_STEPS * NUM_ENVS,)
+        # shape (NUM_STEPS * NUM_ENVS,)
         total_flatten_batched_returns: torch.Tensor = total_batched_returns.reshape(-1)
         # print(f"Total Batched Returns: (shape: {total_batched_returns.shape}, dtype: {total_batched_returns.dtype})")
 
@@ -381,7 +382,8 @@ def evaluate_ppo_agent(kernel_info: str, ppo_agent_model_hidden_layer_dim: int, 
             batched_observations: torch.Tensor = torch.tensor(batched_observations, dtype=torch.float32)
 
             # shape (NUM_ENVS, NUM_LEGAL_DIRECTIVES)
-            batched_action_masks: torch.Tensor = torch.tensor(batched_info["legal_directive_idx_mask"], dtype=torch.float32)
+            # TODO: uncomment below line to enable masked action
+            # batched_action_masks: torch.Tensor = torch.tensor(batched_info["legal_directive_idx_mask"], dtype=torch.float32)
 
             # Obtain action index
             with torch.no_grad():

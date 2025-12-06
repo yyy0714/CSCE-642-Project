@@ -1,4 +1,7 @@
+import time
+
 import ppo
+
 
 if __name__ == "__main__":
     # default kernel is 2mm
@@ -40,6 +43,15 @@ if __name__ == "__main__":
     ppo_agent_model_hidden_layer_dim = 256
     ppo_agent_model_path = "./ppo-agent-256.pth"
 
+    start_time = time.perf_counter()
     ppo.train_ppo_agent(kernel_info, ppo_agent_model_hidden_layer_dim, ppo_agent_model_path)
+    end_time = time.perf_counter()
+    training_duration: float = (end_time - start_time) / 60
+    print(f"Training Duration: {training_duration:.2f} minutes")
+
+    start_time = time.perf_counter()
     ppo.evaluate_ppo_agent(kernel_info, ppo_agent_model_hidden_layer_dim, ppo_agent_model_path)
+    end_time = time.perf_counter()
+    evaluation_duration: float = (end_time - start_time) / 60
+    print(f"Evaluation Duration: {evaluation_duration:.2f} minutes")
     
